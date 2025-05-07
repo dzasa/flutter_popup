@@ -2,7 +2,7 @@ part of flutter_popup;
 
 enum _ArrowDirection { top, bottom }
 
-class CustomPopup extends StatelessWidget {
+class CustomPopup extends StatefulWidget {
   final GlobalKey? anchorKey;
   final Widget content;
   final Widget child;
@@ -32,25 +32,30 @@ class CustomPopup extends StatelessWidget {
     this.onBeforePopup,
   });
 
+  @override
+  State<CustomPopup> createState() => _CustomPopupState();
+}
+
+class _CustomPopupState extends State<CustomPopup> {
   void _show(BuildContext context) {
-    final anchor = anchorKey?.currentContext ?? context;
+    final anchor = widget.anchorKey?.currentContext ?? context;
     final renderBox = anchor.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
     final offset = renderBox.localToGlobal(renderBox.paintBounds.topLeft);
 
-    onBeforePopup?.call();
+    widget.onBeforePopup?.call();
 
     Navigator.of(context).push(
       _PopupRoute(
         targetRect: offset & renderBox.paintBounds.size,
-        backgroundColor: backgroundColor,
-        arrowColor: arrowColor,
-        showArrow: showArrow,
-        barriersColor: barrierColor,
-        contentPadding: contentPadding,
-        contentRadius: contentRadius,
-        contentDecoration: contentDecoration,
-        child: content,
+        backgroundColor: widget.backgroundColor,
+        arrowColor: widget.arrowColor,
+        showArrow: widget.showArrow,
+        barriersColor: widget.barrierColor,
+        contentPadding: widget.contentPadding,
+        contentRadius: widget.contentRadius,
+        contentDecoration: widget.contentDecoration,
+        child: widget.content,
       ),
     );
   }
@@ -59,9 +64,9 @@ class CustomPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onLongPress: isLongPress ? () => _show(context) : null,
-      onTapUp: !isLongPress ? (_) => _show(context) : null,
-      child: child,
+      onLongPress: widget.isLongPress ? () => _show(context) : null,
+      onTapUp: !widget.isLongPress ? (_) => _show(context) : null,
+      child: widget.child,
     );
   }
 }
