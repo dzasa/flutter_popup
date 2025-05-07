@@ -2,6 +2,126 @@ part of flutter_popup;
 
 enum _ArrowDirection { top, bottom }
 
+// Controller to handle popup refresh
+class PopupRefreshController {
+  _RefreshablePopupState? _state;
+
+  // Method to refresh the popup content
+  void refresh() {
+    _state?._refresh();
+  }
+
+  void _attach(_RefreshablePopupState state) {
+    _state = state;
+  }
+
+  void _detach() {
+    _state = null;
+  }
+}
+
+class RefreshablePopup extends StatefulWidget {
+  final GlobalKey? anchorKey;
+  final Widget Function(BuildContext) contentBuilder;
+  final Widget child;
+  final bool isLongPress;
+  final Color? backgroundColor;
+  final Color? arrowColor;
+  final Color? barrierColor;
+  final bool showArrow;
+  final EdgeInsets contentPadding;
+  final double? contentRadius;
+  final BoxDecoration? contentDecoration;
+  final VoidCallback? onBeforePopup;
+  final PopupRefreshController controller;
+
+  const RefreshablePopup({
+    super.key,
+    required this.contentBuilder,
+    required this.child,
+    required this.controller,
+    this.anchorKey,
+    this.isLongPress = false,
+    this.backgroundColor,
+    this.arrowColor,
+    this.showArrow = true,
+    this.barrierColor,
+    this.contentPadding = const EdgeInsets.all(8),
+    this.contentRadius,
+    this.contentDecoration,
+    this.onBeforePopup,
+  });
+
+  @override
+  State<RefreshablePopup> createState() => _RefreshablePopupState();
+}
+
+class _RefreshablePopupState extends State<RefreshablePopup> {
+  // Key to force rebuild of content
+  final _contentKey = GlobalKey();
+  _PopupRoute? _currentRoute;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller._attach(this);
+  }
+
+  @override
+  void dispose() {
+    widget.controller._detach();
+    super.dispose();
+  }
+
+  void _refresh() {
+    // Only refresh if route exists and is active
+    if (_currentRoute != null && _currentRoute!.isCurrent) {
+      setState(() {
+        // Increment key to force rebuild
+        _contentKey.currentState?.setState(() {});
+      });
+    }
+  }
+
+  void _show(BuildContext context) {
+    final anchor = widget.anchorKey?.currentContext ?? context;
+    final renderBox = anchor.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final offset = renderBox.localToGlobal(renderBox.paintBounds.topLeft);
+
+    widget.onBeforePopup?.call();
+
+    _currentRoute = _PopupRoute(
+      targetRect: offset & renderBox.paintBounds.size,
+      backgroundColor: widget.backgroundColor,
+      arrowColor: widget.arrowColor,
+      showArrow: widget.showArrow,
+      barriersColor: widget.barrierColor,
+      contentPadding: widget.contentPadding,
+      contentRadius: widget.contentRadius,
+      contentDecoration: widget.contentDecoration,
+      child: Builder(
+        key: _contentKey,
+        builder: (BuildContext context) => widget.contentBuilder(context),
+      ),
+    );
+
+    Navigator.of(context).push(_currentRoute!).then((_) {
+      _currentRoute = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onLongPress: widget.isLongPress ? () => _show(context) : null,
+      onTapUp: !widget.isLongPress ? (_) => _show(context) : null,
+      child: widget.child,
+    );
+  }
+}
+
 class CustomPopup extends StatefulWidget {
   final GlobalKey? anchorKey;
   final Widget content;
